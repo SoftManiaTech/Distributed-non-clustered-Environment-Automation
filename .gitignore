@@ -12,6 +12,8 @@ crash.*.log
 #pem key file
 *.pem
 
+#ignore ini file
+*.ini
 
 # Ignore override files as they are usually used to override resources locally and so
 # are not checked in

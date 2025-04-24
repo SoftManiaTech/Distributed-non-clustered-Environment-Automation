@@ -148,13 +148,12 @@ ${aws_eip.splunk_eips[1].public_ip != "" ? aws_eip.splunk_eips[1].public_ip : aw
 ${aws_eip.splunk_eips[2].public_ip != "" ? aws_eip.splunk_eips[2].public_ip : aws_instance.Splunk_sh_idx_hf[2].public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_sh_idx_hf[2].private_ip}
 
 [universal_forwarder]
-${aws_eip.uf_eip.public_ip != "" ? aws_eip.uf_eip.public_ip : aws_instance.Splunk-uf.public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk-uf.private_ip}
+${aws_eip.uf_eip.public_ip != "" ? aws_eip.uf_eip.public_ip : aws_instance.Splunk_uf.public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_uf.private_ip}
 
 [splunk:children]
 search_head
 indexer
 heavy_forwarder
-universal_forwarder
 EOT
 
   filename = "${path.module}/inventory.ini"
