@@ -71,16 +71,10 @@
   become_user: splunk
 
   tasks:
-    - name: Check if Splunk is already running-final
-      ansible.builtin.shell: /opt/splunk/bin/splunk status | grep "splunkd is running"
-      register: splunk_status
-      failed_when: false
-      changed_when: false
 
     - name: Pause for 8 seconds before starting Splunk if needed
       ansible.builtin.pause:
         seconds: 8
 
-    - name: Start Splunk if not running
+    - name: Start Splunk
       ansible.builtin.shell: /opt/splunk/bin/splunk start --accept-license --answer-yes
-      when: splunk_status.rc != 0
