@@ -108,19 +108,36 @@
   become: yes
   become_user: splunk
 
+  vars:
+    indexer_ip: "{{ hostvars['indexer']['private_ip'] }}"  # fetch HF IP
+
   tasks:
     - name: Enable listening on port 9997 for HF
       shell: /opt/splunk/bin/splunk enable listen 9997 -auth admin:admin123
       register: listen_output
       failed_when: "'already' not in listen_output.stdout and listen_output.rc != 0"
 
+    - name: Ensure local directory exists
+      file:
+        path: /opt/splunk/etc/system/local
+        state: directory
+        mode: '0755'
 
-    - name: Add Heavy forwarder to the Indexer
-      shell: |
-        /opt/splunk/bin/splunk add search-server https://{{ hostvars[item]['private_ip'] }}:8089 -auth admin:admin123 -remoteUsername Splunk_service_user -remotePassword Softmania123@
-      loop: "{{ groups['indexer'] }}"
+    - name: Create outputs.conf for HF to Indexer
+      copy:
+        dest: "/opt/splunk/etc/system/local/outputs.conf"
+        content: |
+          [tcpout]
+          defaultGroup = my_indexer
+
+          [tcpout:my_indexer]
+          server = {{ indexer_ip }}:9997
+
+    - name: Restart Splunk HF
+      shell: "/opt/splunk/bin/splunk restart"
       args:
         executable: /bin/bash
+
 
 - name: Connect Universal Forwarder to Heavy Forwarder
   hosts: universal_forwarder
