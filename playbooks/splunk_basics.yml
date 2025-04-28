@@ -116,7 +116,7 @@
   become_user: splunk
 
   vars:
-    indexer_ip: "{{ hostvars['indexer']['private_ip'] }}"  # fetch HF IP
+    indexer_ip: "{{ hostvars[groups['indexer'][0]]['private_ip'] }}"
 
   tasks:
     - name: Enable listening on port 9997 for HF
