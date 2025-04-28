@@ -11,14 +11,15 @@
     - name: Set Linux Hostname
       command: hostnamectl set-hostname {{ inventory_hostname }}
 
-    - name: Wait for Splunk to be fully running
-      shell: /opt/splunk/bin/splunk status
-      register: splunk_status
+    - name: Wait for Splunk service to be running
+      shell: |
+        sudo -u splunk /opt/splunk/bin/splunk status
+      register: splunk_service
       retries: 10
       delay: 10
-      until: "'running' in splunk_status.stdout"
+      until: "'running' in splunk_service.stdout"
       become: yes
-      become_user: splunk
+      become_user: root
 
     - name: Set Splunk Servername
       shell: "{{ splunk_bin_path }} set servername {{ inventory_hostname }} -auth admin:admin123 --answer-yes"
