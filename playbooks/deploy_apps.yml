@@ -1,4 +1,11 @@
 ---
+- name: Wait for 15s before starting deployment
+  hosts: localhost
+  tasks:
+    - name: Pause for 15 seconds
+      ansible.builtin.pause:
+        seconds: 15
+
 - name: Deploy apps to Search Head
   hosts: search_head
   become: yes
@@ -28,7 +35,6 @@
 
 - name: Deploy apps to Indexer
   hosts: indexer
-  gather_facts: false
   become: yes
   become_user: splunk
   vars:
@@ -57,7 +63,6 @@
 
 - name: Deploy apps to Heavy Forwarder
   hosts: heavy_forwarder
-  gather_facts: false
   become: yes
   become_user: splunk
   vars:

@@ -1,6 +1,5 @@
 - name: Wait for 1.7 mins before starting deployment
   hosts: localhost
-  gather_facts: false
   tasks:
     - name: Pause for 110 seconds
       ansible.builtin.pause:
@@ -18,6 +17,15 @@
   tasks:
     - name: Set Linux Hostname
       command: hostnamectl set-hostname {{ inventory_hostname }}
+
+    - name: Wait for Splunk to be fully running
+      shell: /opt/splunk/bin/splunk status
+      register: splunk_status
+      retries: 10
+      delay: 10
+      until: "'running' in splunk_status.stdout"
+      become: yes
+      become_user: splunk
 
     - name: Set Splunk Servername
       shell: "{{ splunk_bin_path }} set servername {{ inventory_hostname }} -auth admin:admin123 --answer-yes"
