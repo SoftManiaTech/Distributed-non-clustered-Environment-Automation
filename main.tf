@@ -139,16 +139,16 @@ resource "aws_instance" "Splunk_uf" {
 resource "local_file" "inventory" {
   content = <<EOT
 [search_head]
-${aws_eip.splunk_eips[0].public_ip != "" ? aws_eip.splunk_eips[0].public_ip : aws_instance.Splunk_sh_idx_hf[0].public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_sh_idx_hf[0].private_ip}
+${aws_instance.Splunk_sh_idx_hf[0].tags.Name} ansible_host=${aws_eip.splunk_eips[0].public_ip != "" ? aws_eip.splunk_eips[0].public_ip : aws_instance.Splunk_sh_idx_hf[0].public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_sh_idx_hf[0].private_ip}
 
 [indexer]
-${aws_eip.splunk_eips[1].public_ip != "" ? aws_eip.splunk_eips[1].public_ip : aws_instance.Splunk_sh_idx_hf[1].public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_sh_idx_hf[1].private_ip}
+${aws_instance.Splunk_sh_idx_hf[1].tags.Name} ansible_host=${aws_eip.splunk_eips[1].public_ip != "" ? aws_eip.splunk_eips[1].public_ip : aws_instance.Splunk_sh_idx_hf[1].public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_sh_idx_hf[1].private_ip}
 
 [heavy_forwarder]
-${aws_eip.splunk_eips[2].public_ip != "" ? aws_eip.splunk_eips[2].public_ip : aws_instance.Splunk_sh_idx_hf[2].public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_sh_idx_hf[2].private_ip}
+${aws_instance.Splunk_sh_idx_hf[2].tags.Name} ansible_host=${aws_eip.splunk_eips[2].public_ip != "" ? aws_eip.splunk_eips[2].public_ip : aws_instance.Splunk_sh_idx_hf[2].public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_sh_idx_hf[2].private_ip}
 
 [universal_forwarder]
-${aws_eip.uf_eip.public_ip != "" ? aws_eip.uf_eip.public_ip : aws_instance.Splunk_uf.public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_uf.private_ip}
+${aws_instance.Splunk_uf.tags.Name} ansible_host=${aws_eip.uf_eip.public_ip != "" ? aws_eip.uf_eip.public_ip : aws_instance.Splunk_uf.public_ip} ansible_user=ec2-user private_ip=${aws_instance.Splunk_uf.private_ip}
 
 [splunk:children]
 search_head

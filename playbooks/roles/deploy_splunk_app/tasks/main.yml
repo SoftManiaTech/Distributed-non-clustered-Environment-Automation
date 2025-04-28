@@ -1,0 +1,47 @@
+- name: Create temp dir
+  become_user: root
+  file:
+    path: /tmp/splunk-apps
+    state: directory
+    mode: '0755'
+
+- name: Download TAR file from Dropbox
+  become_user: root
+  get_url:
+    url: "{{ app_zip_url }}"
+    dest: /tmp/splunk-apps/apps.tar
+
+- name: Create temp dir for extracted apps
+  become_user: root
+  file:
+    path: /tmp/splunk-apps/unzipped
+    state: directory
+    mode: '0755'
+
+- name: Extract TAR
+  become_user: root
+  unarchive:
+    src: /tmp/splunk-apps/apps.tar
+    dest: /tmp/splunk-apps/unzipped
+    remote_src: yes
+
+- name: Extract each .tar.gz app into Splunk apps directory
+  become_user: splunk
+  shell: |
+    for app in /tmp/splunk-apps/unzipped/*.tar.gz; do
+      tar -xvzf "$app" -C /opt/splunk/etc/apps/
+    done
+  args:
+    executable: /bin/bash
+
+- name: Clean up
+  become_user: root
+  file:
+    path: /tmp/splunk-apps
+    state: absent
+
+- name: Restart Splunk
+  become_user: root
+  command: /opt/splunk/bin/splunk restart
+  async: 1
+  poll: 0
