@@ -15,7 +15,7 @@
       shell: |
         sudo -u splunk /opt/splunk/bin/splunk status
       register: splunk_service
-      retries: 10
+      retries: 15
       delay: 10
       until: "'running' in splunk_service.stdout"
       become: yes
