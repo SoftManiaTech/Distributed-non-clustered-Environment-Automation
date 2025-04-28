@@ -1,3 +1,10 @@
+- name: Wait for 30s before starting deployment
+  hosts: localhost
+  tasks:
+    - name: Pause for 15 seconds
+      ansible.builtin.pause:
+        seconds: 30
+
 - name: Set Hostname, Servername, Default-Hostname and Banner
   hosts: splunk
   become: true
