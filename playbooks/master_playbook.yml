@@ -1,0 +1,9 @@
+- name: Run Basics and then Deploy Apps
+  hosts: localhost
+  gather_facts: false
+
+- name: Import the deploy apps playbook
+  import_playbook: splunk_basics.yml
+
+- name: Import the deploy apps playbook
+  import_playbook: deploy_apps.yml

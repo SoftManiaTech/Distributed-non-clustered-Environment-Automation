@@ -1,0 +1,148 @@
+- name: Wait for 1.5 mins before starting deployment
+  hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: Pause for 90 seconds
+      ansible.builtin.pause:
+        seconds: 90
+
+- name: Set Hostname, Servername, Default-Hostname and Banner
+  hosts: splunk
+  become: true
+
+  vars:
+    splunk_bin_path: /opt/splunk/bin/splunk
+    splunk_etc_path: /opt/splunk/etc
+    banner_name: "{{ inventory_hostname }}"   # You can customize this message
+
+  tasks:
+    - name: Set Linux Hostname
+      command: hostnamectl set-hostname {{ inventory_hostname }}
+
+    - name: Set Splunk Servername
+      shell: "{{ splunk_bin_path }} set servername {{ inventory_hostname }} -auth admin:admin123 --answer-yes"
+      args:
+        executable: /bin/bash
+
+    - name: Set Splunk Default-Hostname
+      shell: "{{ splunk_bin_path }} set default-hostname {{ inventory_hostname }} -auth admin:admin123 --answer-yes"
+      args:
+        executable: /bin/bash
+
+    - name: Set Splunk Global Banner
+      copy:
+        dest: "{{ splunk_etc_path }}/system/local/global-banner.conf"
+        content: |
+          [BANNER_MESSAGE_SINGLETON]
+          global_banner.visible = true
+          global_banner.message = "{{ banner_name }}"
+          global_banner.background_color = green
+
+    - name: Fix permissions for Splunk folders
+      ansible.builtin.shell: |
+        chown -R splunk:splunk /opt/splunk/etc /opt/splunk/var
+      become: true
+
+    - name: Restart Splunk
+      shell: "{{ splunk_bin_path }} restart"
+      args:
+        executable: /bin/bash
+      become_user: splunk
+
+- name: Set Hostname, Servername, Default-Hostname and Banner
+  hosts: universal_forwarder
+  become: true
+
+  vars:
+    splunk_bin_path: /opt/splunkforwarder/bin/splunk
+
+  tasks:
+    - name: Set Linux Hostname
+      command: hostnamectl set-hostname {{ inventory_hostname }}
+
+    - name: Set Splunk Servername
+      shell: "{{ splunk_bin_path }} set servername {{ inventory_hostname }} -auth admin:admin123 --answer-yes"
+      args:
+        executable: /bin/bash
+
+    - name: Set Splunk Default-Hostname
+      shell: "{{ splunk_bin_path }} set default-hostname {{ inventory_hostname }} -auth admin:admin123 --answer-yes"
+      args:
+        executable: /bin/bash
+
+
+- name: Enable Receiving on Indexer
+  hosts: indexer
+  become: yes
+  become_user: splunk
+  tasks:
+    - name: Enable listening on port 9997
+      shell: /opt/splunk/bin/splunk enable listen 9997 -auth admin:admin123 || true
+    
+    - name: Create service user on Indexer
+      shell: |
+        /opt/splunk/bin/splunk add user Splunk_service_user -role admin -password Softmania123@ -full-name "Splunk Service User" -email "splunk@example.com" -auth admin:admin123
+      args:
+        executable: /bin/bash
+
+- name: Connect Search Head to Indexer
+  hosts: search_head
+  become: yes
+  become_user: splunk
+
+  tasks:
+    - name: Add Indexer as Search Peer from Search Head
+      shell: |
+        /opt/splunk/bin/splunk add search-server https://{{ hostvars[item]['private_ip'] }}:8089 -auth admin:admin123 -remoteUsername Splunk_service_user -remotePassword Softmania123@
+      loop: "{{ groups['indexer'] }}"
+      args:
+        executable: /bin/bash
+
+- name: Connect Heavy Forwarder to Indexer
+  hosts: heavy_forwarder
+  become: yes
+  become_user: splunk
+
+  tasks:
+    - name: Enable listening on port 9997 for HF
+      shell: /opt/splunk/bin/splunk enable listen 9997 -auth admin:admin123 || true
+      args:
+        executable: /bin/bash
+
+    - name: Add Heavy forwarder to the Indexer
+      shell: |
+        /opt/splunk/bin/splunk add search-server https://{{ hostvars[item]['private_ip'] }}:8089 -auth admin:admin123 -remoteUsername Splunk_service_user -remotePassword Softmania123@
+      loop: "{{ groups['indexer'] }}"
+      args:
+        executable: /bin/bash
+
+- name: Connect Universal Forwarder to Heavy Forwarder
+  hosts: universal_forwarder
+  become: yes
+  become_user: splunk
+
+  vars:
+    heavy_forwarder_ip: "{{ hostvars['HF']['private_ip'] }}"  # fetch HF IP
+
+  tasks:
+
+    - name: Ensure local directory exists
+      file:
+        path: /opt/splunkforwarder/etc/system/local
+        state: directory
+        mode: '0755'
+
+    - name: Create outputs.conf for forwarding to Heavy Forwarder
+      copy:
+        dest: "/opt/splunkforwarder/etc/system/local/outputs.conf"
+        content: |
+          [tcpout]
+          defaultGroup = my_heavy_forwarder
+
+          [tcpout:my_heavy_forwarder]
+          server = {{ heavy_forwarder_ip }}:9997
+
+    - name: Restart Splunk Universal Forwarder
+      shell: "/opt/splunkforwarder/bin/splunk restart"
+      args:
+        executable: /bin/bash

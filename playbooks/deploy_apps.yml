@@ -1,0 +1,86 @@
+---
+- name: Deploy apps to Search Head
+  hosts: search_head
+  become: yes
+  become_user: splunk
+  vars:
+    app_zip_url: "https://www.dropbox.com/scl/fi/cs611jjwrmscu6tag9ham/SH.tar?rlkey=ftdovo5qf9n4xh7rjqbxmffkh&st=6tn7agpk&dl=1"
+  roles:
+    - deploy_splunk_app
+
+- name: Download and Install Splunk BOTS v3 Dataset
+  hosts: indexer
+  become: yes
+  become_user: splunk
+  tasks:
+    - name: Download BOTS v3 dataset
+      shell: |
+        cd /tmp
+        curl -O https://botsdataset.s3.amazonaws.com/botsv3/botsv3_data_set.tgz
+      args:
+        executable: /bin/bash
+
+    - name: Install BOTS v3 dataset app
+      shell: |
+        /opt/splunk/bin/splunk install app "/tmp/botsv3_data_set.tgz" -auth admin:admin123
+      args:
+        executable: /bin/bash
+
+- name: Deploy apps to Indexer
+  hosts: indexer
+  gather_facts: false
+  become: yes
+  become_user: splunk
+  vars:
+    app_zip_url: "https://www.dropbox.com/scl/fi/0aeqguhls2q5fqb5fcykk/indexer.tar?rlkey=0mc7u6sng5mh9zzg6rgh8i2fq&st=ckige8g2&dl=1"
+  roles:
+    - deploy_splunk_app
+
+- name: Tutorial Data
+  hosts: indexer
+  tasks:
+
+    - name: Pause for 10 seconds before restarting Splunk
+      ansible.builtin.pause:
+        seconds: 10
+
+    - name: Download and Add Tutorial Data to Splunk Monitoring
+      become: yes
+      become_user: splunk
+      shell: |
+        cd /tmp
+        curl -o tutorialdata.zip https://docs.splunk.com/images/Tutorial/tutorialdata.zip
+        ls -l /tmp/tutorialdata.zip
+        /opt/splunk/bin/splunk add monitor /tmp/tutorialdata.zip -auth admin:admin123 -host_segment 3 -disabled 0
+      args:
+        executable: /bin/bash
+
+- name: Deploy apps to Heavy Forwarder
+  hosts: heavy_forwarder
+  gather_facts: false
+  become: yes
+  become_user: splunk
+  vars:
+    app_zip_url: "https://www.dropbox.com/scl/fi/6urwemu0i0mnthjeovu2t/HF.tar?rlkey=s6c4i4exk1i5qxxp3p18kyem8&st=lnf018gb&dl=1"
+  roles:
+    - deploy_splunk_app
+
+- name: Check and Start Splunk only for splunk group hosts
+  hosts: splunk
+  become: true
+  become_user: splunk
+
+  tasks:
+    - name: Check if Splunk is already running-final
+      ansible.builtin.shell: /opt/splunk/bin/splunk status | grep "splunkd is running"
+      register: splunk_status
+      failed_when: false
+      changed_when: false
+
+    - name: Pause for 8 seconds before starting Splunk if needed
+      ansible.builtin.pause:
+        seconds: 8
+
+    - name: Start Splunk if not running
+      ansible.builtin.shell: /opt/splunk/bin/splunk start --accept-license --answer-yes
+      when: splunk_status.rc != 0
