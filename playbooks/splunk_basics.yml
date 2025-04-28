@@ -1,10 +1,10 @@
-- name: Wait for 1.5 mins before starting deployment
+- name: Wait for 1.7 mins before starting deployment
   hosts: localhost
   gather_facts: false
   tasks:
-    - name: Pause for 90 seconds
+    - name: Pause for 110 seconds
       ansible.builtin.pause:
-        seconds: 90
+        seconds: 110
 
 - name: Set Hostname, Servername, Default-Hostname and Banner
   hosts: splunk
@@ -76,8 +76,11 @@
   become: yes
   become_user: splunk
   tasks:
-    - name: Enable listening on port 9997
-      shell: /opt/splunk/bin/splunk enable listen 9997 -auth admin:admin123 || true
+    - name: Enable listening on port 9997 for indexer
+      shell: /opt/splunk/bin/splunk enable listen 9997 -auth admin:admin123
+      register: listen_output
+      failed_when: "'already' not in listen_output.stdout and listen_output.rc != 0"
+
     
     - name: Create service user on Indexer
       shell: |
@@ -105,9 +108,10 @@
 
   tasks:
     - name: Enable listening on port 9997 for HF
-      shell: /opt/splunk/bin/splunk enable listen 9997 -auth admin:admin123 || true
-      args:
-        executable: /bin/bash
+      shell: /opt/splunk/bin/splunk enable listen 9997 -auth admin:admin123
+      register: listen_output
+      failed_when: "'already' not in listen_output.stdout and listen_output.rc != 0"
+
 
     - name: Add Heavy forwarder to the Indexer
       shell: |
