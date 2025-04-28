@@ -1,7 +1,6 @@
 ---
 - name: Deploy apps to Search Head
   hosts: search_head
-  gather_facts: false
   become: yes
   become_user: splunk
   vars:
