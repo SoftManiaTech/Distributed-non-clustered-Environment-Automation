@@ -28,6 +28,27 @@
       become: yes
       become_user: root
 
+    - name: Start Splunk if not running
+      shell: sudo -u splunk /opt/splunk/bin/splunk start --accept-license --answer-yes --no-prompt
+      when: "'running' not in splunk_status.stdout"
+      register: splunk_start
+      become: yes
+      become_user: root
+
+    - name: Wait 10 seconds after starting Splunk
+      wait_for:
+        timeout: 10
+      when: "'running' not in splunk_status.stdout"
+    
+    - name: Wait for Splunk service to be fully running
+      shell: sudo -u splunk /opt/splunk/bin/splunk status
+      register: splunk_service
+      retries: 15
+      delay: 10
+      until: "'running' in splunk_service.stdout"
+      become: yes
+      become_user: root
+
     - name: Set Splunk Servername
       shell: "{{ splunk_bin_path }} set servername {{ inventory_hostname }} -auth admin:admin123 --answer-yes"
       args:
