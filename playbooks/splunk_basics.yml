@@ -28,10 +28,9 @@
       become: yes
       become_user: root
 
-    - name: Wait 10 seconds after starting Splunk
-      wait_for:
-        timeout: 10
-      when: "'running' not in splunk_status.stdout"
+    - name: Pause for 10 seconds
+      ansible.builtin.pause:
+        seconds: 10
     
     - name: Wait for Splunk service to be fully running
       shell: sudo -u splunk /opt/splunk/bin/splunk status
