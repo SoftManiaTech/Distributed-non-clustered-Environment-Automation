@@ -77,9 +77,12 @@
 
   tasks:
 
-    - name: Pause for 8 seconds before starting Splunk if needed
+    - name: Stop Splunk
+      ansible.builtin.shell: /opt/splunk/bin/splunk stop --accept-license --answer-yes
+
+    - name: Pause for 20 seconds before starting Splunk if needed
       ansible.builtin.pause:
-        seconds: 8
+        seconds: 20
 
     - name: Start Splunk
       ansible.builtin.shell: /opt/splunk/bin/splunk start --accept-license --answer-yes
