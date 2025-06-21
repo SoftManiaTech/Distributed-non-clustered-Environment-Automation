@@ -1,0 +1,77 @@
+---
+- name: Splunk Setup and System Optimization
+  hosts: splunk
+  become: yes
+
+  tasks:
+
+  - name: Create disable-thp systemd service
+    copy:
+      dest: /etc/systemd/system/disable-thp.service
+      content: |
+        [Unit]
+        Description=Disable Transparent Huge Pages and defrag
+        After=network.target
+
+        [Service]
+        Type=oneshot
+        ExecStart=/bin/bash -c 'echo never > /sys/kernel/mm/transparent_hugepage/enabled; echo never > /sys/kernel/mm/transparent_hugepage/defrag'
+
+        [Install]
+        WantedBy=multi-user.target
+
+  - name: Reload systemd and enable disable-thp
+    shell: |
+      systemctl daemon-reexec
+      systemctl daemon-reload
+      systemctl enable disable-thp
+
+  - name: Reboot the system to apply THP changes
+    reboot:
+
+  - name: Verify THP "enabled" setting
+    shell: cat /sys/kernel/mm/transparent_hugepage/enabled
+    register: thp_enabled
+
+  - name: Print THP "enabled"
+    debug:
+      var: thp_enabled.stdout
+
+  - name: Verify THP "defrag" setting
+    shell: cat /sys/kernel/mm/transparent_hugepage/defrag
+    register: thp_defrag
+
+  - name: Print THP "defrag"
+    debug:
+      var: thp_defrag.stdout
+
+  - name: Create splunk systemd service
+    copy:
+      dest: /etc/systemd/system/splunk.service
+      content: |
+        [Unit]
+        Description=Splunk Enterprise
+        After=network.target
+
+        [Service]
+        Type=simple
+        User=splunk
+        Group=splunk
+        ExecStart=/opt/splunk/bin/splunk start --no-prompt --accept-license
+        ExecStop=/opt/splunk/bin/splunk stop
+        RemainAfterExit=yes
+
+        [Install]
+        WantedBy=multi-user.target
+
+  - name: Reload systemd and enable splunk service
+    shell: |
+      systemctl daemon-reexec
+      systemctl daemon-reload
+      systemctl enable splunk
+
+  - name: Start splunk service
+    systemd:
+      name: splunk
+      state: started
+      enabled: yes
